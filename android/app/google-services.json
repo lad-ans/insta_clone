@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "347053967807",
+    "firebase_url": "https://dilena-fa794.firebaseio.com",
+    "project_id": "dilena-fa794",
+    "storage_bucket": "dilena-fa794.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:347053967807:android:54616b0de680adc527b90a",
+        "android_client_info": {
+          "package_name": "com.example.dilena"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "347053967807-an9knfdttg3i92sj94edrfgk88tkgk08.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUcb1r1Ib-wq4xpHi0U9k_eO8Pnc6ppjc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "347053967807-an9knfdttg3i92sj94edrfgk88tkgk08.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
