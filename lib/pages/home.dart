@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dilena/models/user.dart';
 import 'package:dilena/pages/activity_feed.dart';
+import 'package:dilena/pages/create_account.dart';
 import 'package:dilena/pages/profile.dart';
 import 'package:dilena/pages/search.dart';
 import 'package:dilena/pages/timeline.dart';
@@ -8,6 +11,9 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 final GoogleSignIn googleSignIn = GoogleSignIn();
+final usersRef = Firestore.instance.collection("users");
+final DateTime timestamp = DateTime.now();
+User currentUser;
 
 class Home extends StatefulWidget {
   @override
@@ -39,6 +45,7 @@ class _HomeState extends State<Home> {
 
   handleSingnIn(GoogleSignInAccount account) {
     if (account != null) {
+      createUserInFirestore();
       print("Autenticado com a conta: $account");
       setState(() {
         isAuth = true;
@@ -48,6 +55,35 @@ class _HomeState extends State<Home> {
         isAuth = false;
       });
     }
+  }
+
+  createUserInFirestore() async {
+    /**1 check if user existss in users collection in db according to their ID */
+    final GoogleSignInAccount user = googleSignIn.currentUser;
+    DocumentSnapshot doc = await usersRef.document(user.id).get();
+    if (!doc.exists) {
+      /**2 if user doesn't exists, then we want to take him to the create account page */
+      final username = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CreateAccount(),
+        ),
+      );
+      /**3 get username from created account, use it to make new user document in users collection */
+      usersRef.document(user.id).setData({
+        "id": user.id,
+        "username": username,
+        "photoUrl": user.photoUrl,
+        "email": user.email,
+        "displayName": user.displayName,
+        "bio": "",
+        "timestamp": timestamp
+      });
+      doc = await usersRef.document(user.id).get();
+    }
+    currentUser = User.fromDocument(doc);
+    print(currentUser);
+    print(currentUser.username);
   }
 
   @override
@@ -71,18 +107,19 @@ class _HomeState extends State<Home> {
   }
 
   onTap(int pageIndex) {
-    pageController.animateToPage(
-      pageIndex,
-      duration: Duration(milliseconds: 300),
-      curve: Curves.easeInOut
-    );
+    pageController.animateToPage(pageIndex,
+        duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
   Scaffold buildAuthScreen() {
     return Scaffold(
       body: PageView(
         children: <Widget>[
-          Timeline(),
+          // Timeline(),
+          RaisedButton(
+            onPressed: logout,
+            child: Text("Sair"),
+          ),
           ActivityFeed(),
           Upload(),
           Search(),
