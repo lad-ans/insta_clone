@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dilena/models/user.dart';
 import 'package:dilena/pages/home.dart';
+import 'package:dilena/pages/profile.dart';
 import 'package:dilena/widgets/progress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -120,7 +121,7 @@ class UserResult extends StatelessWidget {
         children: <Widget>[
           GestureDetector(
             onTap: () {
-              print("Clicou!");
+              showProfile(context, profileId: user.id);
             },
             child: ListTile(
               leading: CircleAvatar(
@@ -148,4 +149,16 @@ class UserResult extends StatelessWidget {
       ),
     );
   }
+}
+
+showProfile(BuildContext context, {String profileId}) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (context) {
+        return Profile(
+          profileId: profileId,
+        );
+      },
+    ),
+  );
 }

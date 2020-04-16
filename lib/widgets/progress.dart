@@ -14,7 +14,7 @@ circularProgress() {
 
 linearProgress() {
   return Container(
-    height: 12,
+    height: 14,
     padding: EdgeInsets.only(bottom: 10),
     child: LinearProgressIndicator(
       valueColor: AlwaysStoppedAnimation(Colors.purple),

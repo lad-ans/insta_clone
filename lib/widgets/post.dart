@@ -1,7 +1,13 @@
+import 'dart:async';
+
+import 'package:animator/animator.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dilena/models/user.dart';
+import 'package:dilena/pages/activity_feed.dart';
+import 'package:dilena/pages/comments.dart';
 import 'package:dilena/pages/home.dart';
+import 'package:dilena/widgets/custom_image.dart';
 import 'package:dilena/widgets/progress.dart';
 import 'package:flutter/material.dart';
 
@@ -65,14 +71,17 @@ class Post extends StatefulWidget {
 }
 
 class _PostState extends State<Post> {
+  final currentUserId = currentUser?.id;
   final String postId;
   final String ownerId;
   final String username;
   final String location;
   final String description;
   final String mediaUrl;
+  bool showHeart = false;
   int likeCount;
   Map likes;
+  bool isLiked;
 
   _PostState(
       {this.postId,
@@ -106,7 +115,7 @@ class _PostState extends State<Post> {
               ),
             ),
             onTap: () {
-              print("Mostrar Perfil");
+              showProfile(context, profileId: user.id);
             },
           ),
           subtitle: Text(location),
@@ -121,15 +130,106 @@ class _PostState extends State<Post> {
     );
   }
 
+  handleLikePost() {
+    bool _isLiked = likes[currentUserId] == true;
+
+    if (_isLiked) {
+      postsRef
+          .document(ownerId)
+          .collection("userPosts")
+          .document(postId)
+          .updateData({"likes.$currentUserId": false});
+      removeLikeFromActivityFeed();
+      setState(() {
+        likeCount -= 1;
+        isLiked = false;
+        likes[currentUserId] = false;
+      });
+    } else if (!_isLiked) {
+      postsRef
+          .document(ownerId)
+          .collection("userPosts")
+          .document(postId)
+          .updateData({"likes.$currentUserId": true});
+      addLikeToActivityFeed();
+      setState(() {
+        likeCount += 1;
+        isLiked = true;
+        likes[currentUserId] = true;
+        showHeart = true;
+      });
+      Timer(Duration(milliseconds: 500), () {
+        setState(() {
+          showHeart = false;
+        });
+      });
+    }
+  }
+
+  addLikeToActivityFeed() {
+    // add a notification to the post owner's activity  feed only if comment by other users (to avoid get notification for our own like)
+    bool isNotPostOwner = currentUserId != ownerId;
+    if (isNotPostOwner) {
+      return activityFeedRef
+          .document(ownerId)
+          .collection("feedItems")
+          .document(postId)
+          .setData({
+        "type": "like",
+        "username": currentUser.username,
+        "userId": currentUser.id,
+        "userProfileImage": currentUser.photoUrl,
+        "postId": postId,
+        "mediaUrl": mediaUrl,
+        "timestamp": timestamp
+      });
+    }
+  }
+
+  removeLikeFromActivityFeed() {
+    bool isNotPostOwner = currentUserId != ownerId;
+    if (isNotPostOwner) {
+      return activityFeedRef
+          .document(ownerId)
+          .collection("feedItems")
+          .document(postId)
+          .get()
+          .then((doc) {
+        if (doc.exists) {
+          doc.reference.delete();
+        }
+      });
+    }
+  }
+
   GestureDetector buildPostImage() {
     return GestureDetector(
-      onDoubleTap: () {
-        print("Gostando da publicação");
-      },
+      onDoubleTap: handleLikePost,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
-          Image.network(mediaUrl),
+          cachedNetworkImage(mediaUrl),
+          showHeart
+              ? Animator(
+                  duration: Duration(milliseconds: 300),
+                  tween: Tween(begin: 0.8, end: 1.4),
+                  curve: Curves.elasticOut,
+                  cycles: 0,
+                  builder: (animation) {
+                    return Transform.scale(
+                      scale: animation.value,
+                      child: Icon(
+                        Icons.favorite,
+                        color: Colors.red,
+                        size: 80,
+                      ),
+                    );
+                  },
+                )
+              : Container(
+                  width: 0.0,
+                  height: 0.0,
+                ),
         ],
       ),
     );
@@ -145,11 +245,9 @@ class _PostState extends State<Post> {
               padding: EdgeInsets.only(top: 40, left: 20),
             ),
             GestureDetector(
-              onTap: () {
-                print("Gostando da publicação");
-              },
+              onTap: handleLikePost,
               child: Icon(
-                Icons.favorite_border,
+                isLiked ? Icons.favorite : Icons.favorite_border,
                 size: 28,
                 color: Colors.pink,
               ),
@@ -159,7 +257,12 @@ class _PostState extends State<Post> {
             ),
             GestureDetector(
               onTap: () {
-                print("Mostrar comentários");
+                showComments(
+                  context,
+                  postId: postId,
+                  ownerId: ownerId,
+                  mediaUrl: mediaUrl,
+                );
               },
               child: Icon(
                 Icons.chat,
@@ -174,7 +277,7 @@ class _PostState extends State<Post> {
             Container(
                 margin: EdgeInsets.only(left: 20),
                 child: Text(
-                  "$likeCount likes",
+                  "$likeCount gosto",
                   style: TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.bold,
@@ -206,6 +309,8 @@ class _PostState extends State<Post> {
 
   @override
   Widget build(BuildContext context) {
+    isLiked = (likes[currentUserId] == true);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -215,4 +320,12 @@ class _PostState extends State<Post> {
       ],
     );
   }
+}
+
+showComments(BuildContext context,
+    {String postId, String ownerId, String mediaUrl}) {
+  Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+    return Comments(
+        postId: postId, postOwnerId: ownerId, postMediaUrl: mediaUrl);
+  }));
 }
