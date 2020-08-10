@@ -64,16 +64,16 @@ class CommentsState extends State<Comments> {
     });
     bool isNotPostOwner = postOwnerId != currentUser.id;
     if (isNotPostOwner) {
-      activityFeedRef.document(postOwnerId).collection("feedItems").add({
-        "type": "comment",
-        "commentData": commentController.text,
-        "timestamp": timestamp,
-        "postId": postId,
-        "username": currentUser.username,
-        "userId": currentUser.id,
-        "userProfileImage": currentUser.photoUrl,
-        "mediaUrl": postMediaUrl,
-      });
+    activityFeedRef.document(postOwnerId).collection("feedItems").add({
+      "type": "comment",
+      "commentData": commentController.text,
+      "timestamp": timestamp,
+      "postId": postId,
+      "username": currentUser.username,
+      "userId": currentUser.id,
+      "userProfileImage": currentUser.photoUrl,
+      "mediaUrl": postMediaUrl,
+    });
     }
     commentController.clear();
   }

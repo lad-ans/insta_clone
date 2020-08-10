@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 void main() {
   runApp(MyApp());
   Firestore.instance.settings(timestampsInSnapshotsEnabled: true).then((_) {
-    print("Timestamp abilitado em snapshot \n");
+    // print("Timestamp abilitado em snapshot \n");
   }, onError: (_) {
-    print("Abilitando Timestamp em snapshot \n");
+    // print("Abilitando Timestamp em snapshot \n");
   });
 }
 

@@ -20,6 +20,10 @@ class PostScreen extends StatelessWidget {
           .get(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
+          // print("=============== POST SCREEN =============== \n postId: " +
+          //     postId +
+          //     "userId: " +
+          //     userId);
           return circularProgress();
         }
         Post post = Post.fromDocument(snapshot.data);
@@ -34,7 +38,6 @@ class PostScreen extends StatelessWidget {
                 ),
               ],
             ),
-
           ),
         );
       },

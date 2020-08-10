@@ -16,6 +16,7 @@ class User {
       this.displayName,
       this.bio});
 
+
   factory User.fromDocument(DocumentSnapshot doc) {
     return User(
         id: doc["id"],

@@ -6,13 +6,13 @@ Widget cachedNetworkImage(String mediaUrl) {
     imageUrl: mediaUrl,
     fit: BoxFit.cover,
     placeholder: (context, url) {
-      Padding(
+      return Padding(
         padding: EdgeInsets.all(20),
         child: CircularProgressIndicator(),
       );
     },
     errorWidget: (context, url, error) {
-      Icon(Icons.error);
+      return Icon(Icons.error);
     },
   );
 }

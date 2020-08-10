@@ -101,6 +101,8 @@ class _PostState extends State<Post> {
           return circularProgress();
         }
         User user = User.fromDocument(snapshot.data);
+        // isPostOwner
+        bool isPostOwner = currentUserId == ownerId;
         return ListTile(
           leading: CircleAvatar(
             backgroundColor: Colors.grey,
@@ -119,15 +121,89 @@ class _PostState extends State<Post> {
             },
           ),
           subtitle: Text(location),
-          trailing: IconButton(
-            icon: Icon(Icons.more_vert),
-            onPressed: () {
-              print("Apagando publicação");
-            },
-          ),
+          trailing: isPostOwner
+              ? IconButton(
+                  icon: Icon(Icons.more_vert),
+                  onPressed: () {
+                    handleDeletePost(context);
+                  },
+                )
+              : Container(
+                  width: 0.0,
+                  height: 0.0,
+                ),
         );
       },
     );
+  }
+
+  handleDeletePost(BuildContext parentContext) {
+    return showDialog(
+        context: parentContext,
+        builder: (context) {
+          return SimpleDialog(
+            title: Text("Apagar esta Publicação?"),
+            children: <Widget>[
+              SimpleDialogOption(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  deletePost();
+                },
+                child: Text(
+                  "Apagar",
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              ),
+              SimpleDialogOption(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  "Cancelar",
+                ),
+              ),
+            ],
+          );
+        });
+  }
+
+// note: to delete a post, owner and currentUserId must be equal.
+  deletePost() async {
+    // delete post itself
+    postsRef
+        .document(ownerId)
+        .collection("userPosts")
+        .document(postId)
+        .get()
+        .then((doc) {
+      if (doc.exists) {
+        doc.reference.delete();
+      }
+    });
+    // delete uploaded image for the post
+    storageRef.child("post_$postId.jpg").delete();
+    // delete all activity feed notifications
+    QuerySnapshot activityFeedSnapshot = await activityFeedRef
+        .document(ownerId)
+        .collection("feedItems")
+        .where("postId", isEqualTo: postId)
+        .getDocuments();
+
+    activityFeedSnapshot.documents.forEach((doc) {
+      if (doc.exists) {
+        doc.reference.delete();
+      }
+    });
+    // delete all comments
+    QuerySnapshot commentsRefSnapshot = await commentsRef
+        .document(postId)
+        .collection("comments")
+        .getDocuments();
+    commentsRefSnapshot.documents.forEach((doc) {
+      if (doc.exists) {
+        doc.reference.delete();
+      }
+    });
   }
 
   handleLikePost() {
@@ -170,35 +246,35 @@ class _PostState extends State<Post> {
     // add a notification to the post owner's activity  feed only if comment by other users (to avoid get notification for our own like)
     bool isNotPostOwner = currentUserId != ownerId;
     if (isNotPostOwner) {
-      return activityFeedRef
-          .document(ownerId)
-          .collection("feedItems")
-          .document(postId)
-          .setData({
-        "type": "like",
-        "username": currentUser.username,
-        "userId": currentUser.id,
-        "userProfileImage": currentUser.photoUrl,
-        "postId": postId,
-        "mediaUrl": mediaUrl,
-        "timestamp": timestamp
-      });
+    return activityFeedRef
+        .document(ownerId)
+        .collection("feedItems")
+        .document(postId)
+        .setData({
+      "type": "like",
+      "username": currentUser.username,
+      "userId": currentUser.id,
+      "userProfileImage": currentUser.photoUrl,
+      "postId": postId,
+      "mediaUrl": mediaUrl,
+      "timestamp": timestamp
+    });
     }
   }
 
   removeLikeFromActivityFeed() {
     bool isNotPostOwner = currentUserId != ownerId;
     if (isNotPostOwner) {
-      return activityFeedRef
-          .document(ownerId)
-          .collection("feedItems")
-          .document(postId)
-          .get()
-          .then((doc) {
-        if (doc.exists) {
-          doc.reference.delete();
-        }
-      });
+    return activityFeedRef
+        .document(ownerId)
+        .collection("feedItems")
+        .document(postId)
+        .get()
+        .then((doc) {
+      if (doc.exists) {
+        doc.reference.delete();
+      }
+    });
     }
   }
 

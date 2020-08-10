@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dilena/models/user.dart';
 import 'package:dilena/pages/activity_feed.dart';
@@ -6,6 +7,7 @@ import 'package:dilena/pages/profile.dart';
 import 'package:dilena/pages/search.dart';
 import 'package:dilena/pages/timeline.dart';
 import 'package:dilena/pages/upload.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -14,9 +16,12 @@ import 'package:google_sign_in/google_sign_in.dart';
 final GoogleSignIn googleSignIn = GoogleSignIn();
 final StorageReference storageRef = FirebaseStorage.instance.ref();
 final usersRef = Firestore.instance.collection("users");
+final timelineRef = Firestore.instance.collection("timeline");
 final postsRef = Firestore.instance.collection("posts");
 final commentsRef = Firestore.instance.collection("comments");
 final activityFeedRef = Firestore.instance.collection("feed");
+final followersRef = Firestore.instance.collection("followers");
+final followingRef = Firestore.instance.collection("following");
 final DateTime timestamp = DateTime.now();
 User currentUser;
 
@@ -26,6 +31,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
   bool isAuth = false;
   PageController pageController;
   int pageIndex = 0;
@@ -38,28 +45,71 @@ class _HomeState extends State<Home> {
     googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount account) {
       handleSingnIn(account);
     }, onError: (error) {
-      print("Erro na autenticação: " + error);
+      // print("Erro na autenticação: " + error);
     });
     /**reautenticate user when app is opened */
     googleSignIn.signInSilently(suppressErrors: false).then((account) {
       handleSingnIn(account);
     }).catchError((error) {
-      print("Erro na autenticação: " + error);
+      // print("Erro na autenticação: " + error);
     });
   }
 
-  handleSingnIn(GoogleSignInAccount account) {
+  handleSingnIn(GoogleSignInAccount account) async {
     if (account != null) {
-      createUserInFirestore();
-      print("Autenticado com a conta: $account");
+      await createUserInFirestore();
+      // print("Autenticado com a conta: $account");
       setState(() {
         isAuth = true;
       });
+      configurePushNotifications();
     } else {
       setState(() {
         isAuth = false;
       });
     }
+  }
+
+  configurePushNotifications() {
+    final GoogleSignInAccount user = googleSignIn.currentUser;
+    if (Platform.isIOS) getiOSPermission();
+
+    _firebaseMessaging.getToken().then((token) {
+      // print("Token do Firebase Messaging: $token \n");
+      usersRef
+          .document(user.id)
+          .updateData({"androidNotificationToken": token});
+    });
+
+    _firebaseMessaging.configure(
+      // onLaunch: (Map<String, dynamic> message) async {},
+      // onResume: (Map<String, dynamic> message) async {},
+      onMessage: (Map<String, dynamic> message) async {
+        // print("on message: $message \n");
+        final String recipientId = message['data']['recipient'];
+        final String body = message['notification']['body'];
+
+        if (recipientId == user.id) {
+          // print("Notificação mostrada");
+          SnackBar snackbar = SnackBar(
+            backgroundColor: Colors.teal[700],
+            content: Text(
+              body,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+          _scaffoldKey.currentState.showSnackBar(snackbar);
+        }
+        // print("Notificação não mostrada");
+      },
+    );
+  }
+  getiOSPermission() {
+    _firebaseMessaging.requestNotificationPermissions(
+        IosNotificationSettings(alert: true, badge: true, sound: true));
+    _firebaseMessaging.onIosSettingsRegistered.listen((settings) {
+      // print("Configurações registradas: $settings");
+    });
   }
 
   createUserInFirestore() async {
@@ -84,11 +134,18 @@ class _HomeState extends State<Home> {
         "bio": "",
         "timestamp": timestamp
       });
+      // make the new user their own follower (to include their posts in their timeline)
+      await followersRef
+          .document(user.id)
+          .collection("userFollowers")
+          .document(user.id)
+          .setData({});
+
       doc = await usersRef.document(user.id).get();
     }
     currentUser = User.fromDocument(doc);
-    print(currentUser);
-    print(currentUser.username);
+    // print(currentUser);
+    // print(currentUser.username);
   }
 
   @override
@@ -118,13 +175,10 @@ class _HomeState extends State<Home> {
 
   Scaffold buildAuthScreen() {
     return Scaffold(
+      key: _scaffoldKey,
       body: PageView(
         children: <Widget>[
-          // Timeline(),
-          RaisedButton(
-            onPressed: logout,
-            child: Text("Sair"),
-          ),
+          Timeline(currentUser: currentUser),
           ActivityFeed(),
           Upload(currentUser: currentUser),
           Search(),
@@ -147,10 +201,6 @@ class _HomeState extends State<Home> {
         ],
       ),
     );
-    // return RaisedButton(
-    //   onPressed: logout,
-    //   child: Text("Sair"),
-    // );
   }
 
   Scaffold buildUnAuthScreen() {
