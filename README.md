@@ -1,6 +1,5 @@
 # dilena
-
-A new Flutter project.
+Flutter Social Network - Instagram Clone
 
 ## Getting Started
 
